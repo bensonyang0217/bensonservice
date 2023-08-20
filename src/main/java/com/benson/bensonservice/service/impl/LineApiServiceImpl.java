@@ -34,6 +34,9 @@ public class LineApiServiceImpl implements LineApiService {
     @Value("${line.notify.redirectUri}")
     private String notifyRedirectUri;
 
+    @Value("${line.notify.token}")
+    private String lineNotifyTokenTest;
+
     /**
      * auth notify
      *
@@ -74,6 +77,29 @@ public class LineApiServiceImpl implements LineApiService {
         String tokenUrl = ExternalServiceUrl.TOKEN_NOTIFY.getUrl();
         try {
             ResponseEntity<String> response = restTemplate.exchange(tokenUrl, HttpMethod.POST, request, String.class);
+            return response;
+        } catch (HttpClientErrorException e) {
+            logger.error("Error occurred while calling the remote service.", e);
+            return ResponseEntity.status(e.getStatusCode()).body("An error occurred: " + e.getLocalizedMessage());
+        } catch (HttpServerErrorException e) {
+            logger.error("Server error occurred while calling the remote service.", e);
+            return ResponseEntity.status(e.getStatusCode()).body("Server error occurred. Please try again later.");
+        }
+    }
+
+    @Override
+    public ResponseEntity<String> sendNotify(String message) {
+        RestTemplate restTemplate = new RestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED);
+        String token = lineNotifyTokenTest;
+        headers.setBearerAuth(token);
+        MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
+        map.set("message", message);
+        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(map, headers);
+        String notifyUrl = ExternalServiceUrl.API_NOTIFY.getUrl();
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(notifyUrl, HttpMethod.POST, request, String.class);
             return response;
         } catch (HttpClientErrorException e) {
             logger.error("Error occurred while calling the remote service.", e);

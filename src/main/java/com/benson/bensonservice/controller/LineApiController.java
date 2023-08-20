@@ -5,27 +5,25 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("api/v1/line/")
+@RequestMapping("api/v1/line")
 public class LineApiController {
     private static final Logger logger = LogManager.getLogger(LineApiController.class);
     @Autowired
     private LineApiService lineApiService;
 
-    @GetMapping("auth_notify")
+    @GetMapping("/auth_notify")
     public String authNotify() {
         logger.info("auth notify");
         return lineApiService.authNotify();
     }
 
-    @GetMapping("notify/callback")
+    @GetMapping("/notify/callback")
     public ResponseEntity<String> lineNotifyCallBack(@RequestParam(value = "code", required = false) String code,
                                                      @RequestParam("state") String state,
                                                      @RequestParam(value = "error", required = false) String error) {
@@ -40,5 +38,12 @@ public class LineApiController {
             return ResponseEntity.badRequest().body("An error occurred: " + error);
         }
         return ResponseEntity.ok(lineApiService.tokenNotify(code).getBody());
+    }
+
+    @PostMapping("/notify")
+    public ResponseEntity<String> sendNotify(@RequestBody HashMap<String, String> request) {
+        String message = request.get("message");
+        logger.info("message: {}", message);
+        return ResponseEntity.ok(lineApiService.sendNotify(message).getBody());
     }
 }
