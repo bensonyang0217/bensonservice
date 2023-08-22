@@ -1,5 +1,6 @@
 package com.benson.bensonservice.utils;
 
+import com.benson.bensonservice.config.security.UserPrincipal;
 import com.benson.bensonservice.model.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -8,12 +9,9 @@ import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.convert.DurationUnit;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -30,8 +28,8 @@ public class JwtTokenProvider {
     @DurationUnit(ChronoUnit.MILLIS)
     private Duration validityInMs;
 
-    @Autowired
-    private UserDetailsService userDetailsService;
+//    @Autowired
+//    private UserDetailsService userDetailsService;
 
     @PostConstruct
     protected void initial() {
@@ -39,12 +37,21 @@ public class JwtTokenProvider {
     }
 
     public String createToken(User user) {
-        Claims claims = Jwts.claims().setSubject(user.getUsername());
-        claims.put("roles", user.getAuthorities());
+        Claims claims = Jwts.claims()
+                .setSubject(String.valueOf(user.getId()));
+//        claims.put("roles", user.getAuthorities());
 //        claims.put("nickname", securityUserDetails.getNickname());
         return generateToken(claims);
     }
 
+    public String createToken(Authentication authentication) {
+        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+        Claims claims = Jwts.claims()
+                .setSubject(Long.toString(userPrincipal.getId()))
+                .setIssuedAt(new Date());
+        claims.put("roles", userPrincipal.getAuthorities());
+        return generateToken(claims);
+    }
 
     public String refreshToken(String token) {
         Claims claims = Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody();
@@ -62,12 +69,22 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    public Authentication getAuthentication(String token) {
-        User userDetails = (User) userDetailsService.loadUserByUsername(getUsername(token));
-//        Claims claims = Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody();
+//    public Authentication getAuthentication(String token) {
+//        User userDetails = (User) userDetailsService.loadUserByUsername(getUsername(token));
+////        Claims claims = Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody();
+//
+//        return new UsernamePasswordAuthenticationToken(userDetails, "", userDetails.getAuthorities());
+//    }
 
-        return new UsernamePasswordAuthenticationToken(userDetails, "", userDetails.getAuthorities());
+    public Integer getUserIdFromToken(String token) {
+        Claims claims = Jwts.parser()
+                .setSigningKey(secretKey)
+                .parseClaimsJws(token)
+                .getBody();
+
+        return Integer.parseInt(claims.getSubject());
     }
+
 
     public String getUsername(String token) {
         return Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody().getSubject();
@@ -98,4 +115,5 @@ public class JwtTokenProvider {
 //        }
         }
     }
+
 }
