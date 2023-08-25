@@ -1,6 +1,8 @@
 package com.benson.bensonservice.config.security;
 
 import com.benson.bensonservice.config.security.oauth2.CustomOAuth2UserService;
+import com.benson.bensonservice.config.security.oauth2.CustomOidcUserService;
+import com.benson.bensonservice.config.security.oauth2.HttpCookieOAuth2AuthorizationRequestRepository;
 import com.benson.bensonservice.config.security.oauth2.OAuth2AuthenticationSuccessHandler;
 import com.benson.bensonservice.filter.JwtAuthFilter;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +20,10 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.oidc.authentication.OidcIdTokenDecoderFactory;
+import org.springframework.security.oauth2.client.registration.ClientRegistration;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.JwtDecoderFactory;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -36,9 +42,13 @@ public class SecurityConfig {
 
     @Autowired
     private OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
-
     @Autowired
     private CustomOAuth2UserService customOAuth2UserService;
+
+    @Bean
+    public HttpCookieOAuth2AuthorizationRequestRepository cookieOAuth2AuthorizationRequestRepository() {
+        return new HttpCookieOAuth2AuthorizationRequestRepository();
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -47,25 +57,47 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http.csrf((csrf) -> csrf.disable()).httpBasic((httpBasic) -> httpBasic.disable())
+        http.csrf((csrf) -> csrf.disable())
+                .httpBasic((httpBasic) -> httpBasic.disable())
+                .formLogin((formLogin) -> formLogin.disable())
+                .httpBasic((httpBasic) -> httpBasic.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorizeHttpRequests -> authorizeHttpRequests
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/**", "/oauth2/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/user").permitAll()
 //                        .requestMatchers(HttpMethod.POST, "/refresh_token").permitAll()
-                        .requestMatchers("/error").permitAll()
+                        .requestMatchers("/", "/error", "/oauth2/**", "/resources/**", "/cuslogin.html").permitAll()
                         //.requestMatchers("/**").hasAnyAuthority("ROLE_USER")
                         .anyRequest().authenticated())
-//                .oauth2Login(Customizer.withDefaults())
                 .oauth2Login(oauth2 -> oauth2
+
+                        .authorizationEndpoint(authorizationEndpointConfig -> authorizationEndpointConfig
+                                .baseUri("/oauth2/authorize")
+                                .authorizationRequestRepository(cookieOAuth2AuthorizationRequestRepository()))
+                        .redirectionEndpoint(redirectionEndpointConfig -> redirectionEndpointConfig
+                                .baseUri("/oauth2/callback/*"))
                         .userInfoEndpoint(userInfoEndpointConfig -> userInfoEndpointConfig
+//                                .oidcUserService(customOidcUserService())
                                 .userService((customOAuth2UserService)))
                         .successHandler(oAuth2AuthenticationSuccessHandler))
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+
+    @Bean
+    public CustomOidcUserService customOidcUserService() {
+        return new CustomOidcUserService();
+    }
+
+    @Bean
+    public JwtDecoderFactory<ClientRegistration> idTokenDecoderFactory() {
+        OidcIdTokenDecoderFactory idTokenDecoderFactory = new OidcIdTokenDecoderFactory();
+        idTokenDecoderFactory.setJwsAlgorithmResolver(clientRegistration -> MacAlgorithm.HS256);
+        return idTokenDecoderFactory;
     }
 
 
@@ -110,4 +142,5 @@ public class SecurityConfig {
     public JwtAuthFilter jwtAuthFilter() {
         return new JwtAuthFilter();
     }
+
 }

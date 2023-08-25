@@ -31,19 +31,8 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         } catch (OAuth2AuthenticationProcessingException e) {
             throw new RuntimeException(e);
         } catch (Exception ex) {
-            // Throwing an instance of AuthenticationException will trigger the OAuth2AuthenticationFailureHandler
             throw new InternalAuthenticationServiceException(ex.getMessage(), ex.getCause());
         }
-
-//        User user = User.builder().id(2)
-//                .username((String) oAuth2User.getAttributes().get("userId"))
-//                .name((String) oAuth2User.getAttributes().get("displayName"))
-//                .imageUrl((String) oAuth2User.getAttributes().get("pictureUrl"))
-//                .provider(AuthProvider.line)
-//                .role(Role.USER).build();
-
-//        return UserPrincipal.create(user, oAuth2User.getAttributes());
-//        return oAuth2User;
     }
 
     private OAuth2User processOAuth2User(OAuth2UserRequest oAuth2UserRequest, OAuth2User oAuth2User) throws OAuth2AuthenticationProcessingException {
@@ -69,14 +58,25 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         return UserPrincipal.create(user, oAuth2User.getAttributes());
     }
 
+
     private User registerNewUser(OAuth2UserRequest oAuth2UserRequest, OAuth2UserInfo oAuth2UserInfo) {
         User user = new User();
-
+//        String email = null;
         user.setProvider(AuthProvider.valueOf(oAuth2UserRequest.getClientRegistration().getRegistrationId()));
         user.setProviderId(oAuth2UserInfo.getId());
         user.setUsername(oAuth2UserInfo.getId());
         user.setName(oAuth2UserInfo.getName());
+
+//        if (((OidcUserRequest) oAuth2UserRequest) != null) {
+//            OidcUserRequest oidcUserRequest = (OidcUserRequest) oAuth2UserRequest;
+//            OidcIdToken idToken = oidcUserRequest.getIdToken();
+//            Map<String, Object> claims = idToken.getClaims();
+//            email = (String) claims.get("email");
+//            user.setEmail(email);
+//        } else {
         user.setEmail(oAuth2UserInfo.getEmail());
+//        }
+
         user.setImageUrl(oAuth2UserInfo.getImageUrl());
         user.setRole(Role.valueOf(Role.USER.name().toString()));
         return userRepo.save(user);

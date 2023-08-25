@@ -1,9 +1,14 @@
 package com.benson.bensonservice.controller;
 
+import com.benson.bensonservice.model.vo.SendLineNotifyRespVo;
+import com.benson.bensonservice.response.Body;
 import com.benson.bensonservice.service.LineApiService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -41,9 +46,18 @@ public class LineApiController {
     }
 
     @PostMapping("/notify")
-    public ResponseEntity<String> sendNotify(@RequestBody HashMap<String, String> request) {
+    public ResponseEntity<Body> sendNotify(@RequestBody HashMap<String, String> request) throws JsonProcessingException {
         String message = request.get("message");
         logger.info("message: {}", message);
-        return ResponseEntity.ok(lineApiService.sendNotify(message).getBody());
+        var resp = lineApiService.sendNotify(message).getBody();
+//        if (resp.equals("400")) {
+//
+//        }
+        ObjectMapper mapper = new ObjectMapper();
+        SendLineNotifyRespVo sendLineNotifyRespVo = mapper.readValue(resp, SendLineNotifyRespVo.class);
+        if (sendLineNotifyRespVo.getStatus() != HttpStatus.OK.value()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Body.build().fail("Not Found."));
+        }
+        return ResponseEntity.ok(Body.build().ok("ok"));
     }
 }

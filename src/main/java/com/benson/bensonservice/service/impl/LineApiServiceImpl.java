@@ -1,14 +1,14 @@
 package com.benson.bensonservice.service.impl;
 
 import com.benson.bensonservice.constants.ExternalServiceUrl;
+import com.benson.bensonservice.model.vo.LineNotifyRespVo;
+import com.benson.bensonservice.repo.LineRepo;
 import com.benson.bensonservice.service.LineApiService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -16,6 +16,10 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
+
+import java.util.Optional;
+
+import static com.benson.bensonservice.utils.AuthUtils.getUserId;
 
 /**
  * line api
@@ -36,6 +40,9 @@ public class LineApiServiceImpl implements LineApiService {
 
     @Value("${line.notify.token}")
     private String lineNotifyTokenTest;
+
+    @Autowired
+    private LineRepo lineRepo;
 
     /**
      * auth notify
@@ -89,10 +96,15 @@ public class LineApiServiceImpl implements LineApiService {
 
     @Override
     public ResponseEntity<String> sendNotify(String message) {
+        Integer userId = getUserId();
+        Optional<LineNotifyRespVo> optionalLineNotifyRespVo = Optional.ofNullable(lineRepo.findByUserId(userId));
+        if (!optionalLineNotifyRespVo.isPresent()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("400");
+        }
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED);
-        String token = lineNotifyTokenTest;
+        String token = optionalLineNotifyRespVo.get().getNotifyToken();
         headers.setBearerAuth(token);
         MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
         map.set("message", message);

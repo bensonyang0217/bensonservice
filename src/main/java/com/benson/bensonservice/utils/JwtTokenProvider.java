@@ -1,7 +1,6 @@
 package com.benson.bensonservice.utils;
 
 import com.benson.bensonservice.config.security.UserPrincipal;
-import com.benson.bensonservice.model.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -12,6 +11,7 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.convert.DurationUnit;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -27,31 +27,30 @@ public class JwtTokenProvider {
     @Value("${jwt.valid}")
     @DurationUnit(ChronoUnit.MILLIS)
     private Duration validityInMs;
-
-//    @Autowired
-//    private UserDetailsService userDetailsService;
-
+    
     @PostConstruct
     protected void initial() {
         secretKey = Base64.getEncoder().encodeToString(secretKey.getBytes());
     }
 
-    public String createToken(User user) {
-        Claims claims = Jwts.claims()
-                .setSubject(String.valueOf(user.getId()));
-//        claims.put("roles", user.getAuthorities());
-//        claims.put("nickname", securityUserDetails.getNickname());
+    public String createToken(Authentication authentication) {
+        Object principal = authentication.getPrincipal();
+        Claims claims = Jwts.claims().setIssuedAt(new Date());
+
+        if (principal instanceof UserPrincipal) {
+            UserPrincipal userPrincipal = (UserPrincipal) principal;
+            claims.setSubject(Long.toString(userPrincipal.getId()))
+                    .put("roles", userPrincipal.getAuthorities());
+        } else if (principal instanceof DefaultOidcUser) {
+            DefaultOidcUser oidcUser = (DefaultOidcUser) principal;
+            claims.setSubject(oidcUser.getSubject());
+            // 假設 roles 或其他屬性可以從 DefaultOidcUser 獲得
+//            claims.put("roles", oidcUser.);
+        }
+
         return generateToken(claims);
     }
 
-    public String createToken(Authentication authentication) {
-        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
-        Claims claims = Jwts.claims()
-                .setSubject(Long.toString(userPrincipal.getId()))
-                .setIssuedAt(new Date());
-        claims.put("roles", userPrincipal.getAuthorities());
-        return generateToken(claims);
-    }
 
     public String refreshToken(String token) {
         Claims claims = Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody();
@@ -68,13 +67,6 @@ public class JwtTokenProvider {
                 .signWith(SignatureAlgorithm.HS512, secretKey)
                 .compact();
     }
-
-//    public Authentication getAuthentication(String token) {
-//        User userDetails = (User) userDetailsService.loadUserByUsername(getUsername(token));
-////        Claims claims = Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody();
-//
-//        return new UsernamePasswordAuthenticationToken(userDetails, "", userDetails.getAuthorities());
-//    }
 
     public Integer getUserIdFromToken(String token) {
         Claims claims = Jwts.parser()
@@ -110,9 +102,6 @@ public class JwtTokenProvider {
         } catch (Exception e) {
             logger.warn("token exception: {}", e.getMessage());
             return false;
-//        } catch (JwtException | IllegalArgumentException e) {
-//            throw new InvalidJwtAuthenticationException("Invalid JWT token");
-//        }
         }
     }
 
