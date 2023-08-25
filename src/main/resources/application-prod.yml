@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: ${ MYSQL_HOST }
+    username: ${ MYSQL_USERNAME }
+    password: ${ MYSQL_PASSWORD }
+  jpa:
+    hibernate:
+      ddl-auto: update
+      show-sql: true
+    properties:
+      hibernate:
+      # Format queries
+      format_sql: true
+line:
+  notify:
+    clientId: ${ CLINENT_ID }
+    clientSecret: ${ CLINENT_SECRET }
+    redirectUri: ${ REDIRECT_URI }
