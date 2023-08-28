@@ -8,4 +8,6 @@ public interface UserService {
     AddUserVo addUser(AddUserVo addUserVo);
 
     UserMeVo currentUser();
+
+    UserMeVo findById(Integer userId);
 }

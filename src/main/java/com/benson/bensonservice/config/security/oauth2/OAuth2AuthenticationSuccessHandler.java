@@ -62,6 +62,12 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         String targetUrl = redirectUri.orElse(getDefaultTargetUrl());
 
         String token = jwtTokenProvider.createToken(authentication);
+        // Store the token in a cookie
+        Cookie tokenCookie = new Cookie("TOKEN", token);
+        tokenCookie.setHttpOnly(true);
+        tokenCookie.setSecure(true);  // Only set for HTTPS
+        tokenCookie.setPath("/");
+        response.addCookie(tokenCookie);
 
         return UriComponentsBuilder.fromUriString(targetUrl)
                 .queryParam("token", token)
