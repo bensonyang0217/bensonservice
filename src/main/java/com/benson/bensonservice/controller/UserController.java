@@ -1,5 +1,7 @@
 package com.benson.bensonservice.controller;
 
+import com.benson.bensonservice.config.security.UserPrincipal;
+import com.benson.bensonservice.config.security.oauth2.CurrentUser;
 import com.benson.bensonservice.model.vo.AddUserVo;
 import com.benson.bensonservice.model.vo.UserMeVo;
 import com.benson.bensonservice.response.Body;
@@ -36,4 +38,12 @@ public class UserController {
     public ResponseEntity<Body> userList() {
         return null;
     }
+
+    @GetMapping("/oauth2/me")
+    public ResponseEntity<Body> getCurrentUser(@CurrentUser UserPrincipal userPrincipal) {
+//        return  ResponseEntity.ok(Body.build().ok(userService.findById(userPrincipal.getId()))
+//                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userPrincipal.getId()));
+        return ResponseEntity.ok(Body.build().ok("success", userPrincipal));
+    }
+
 }

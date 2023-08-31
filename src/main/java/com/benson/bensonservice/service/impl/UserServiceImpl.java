@@ -57,4 +57,25 @@ public class UserServiceImpl implements UserService {
         });
         return userMeVo.get();
     }
+
+    @Override
+    public UserMeVo findById(Integer userId) {
+        Optional<User> optUser = userRepo.findById(userId);
+        UserMeVo userMeVo = null;
+        if (optUser.isPresent()) {
+            var username = optUser.get().getUsername();
+            var id = optUser.get().getId();
+            var name = optUser.get().getName();
+            var email = optUser.get().getEmail();
+            var role = optUser.get().getRole();
+            userMeVo = UserMeVo.builder()
+                    .id(id)
+                    .username(username)
+                    .name(name)
+                    .email(email)
+                    .role(role)
+                    .build();
+        }
+        return userMeVo;
+    }
 }
